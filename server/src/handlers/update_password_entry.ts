@@ -1,18 +1,54 @@
+import { db } from '../db';
+import { passwordEntriesTable } from '../db/schema';
 import { type UpdatePasswordEntryInput, type PasswordEntry } from '../schema';
+import { eq } from 'drizzle-orm';
 
 export const updatePasswordEntry = async (input: UpdatePasswordEntryInput): Promise<PasswordEntry> => {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is updating an existing password entry in the database.
-    // It should validate the input, encrypt new password if provided, update timestamps, and return the updated entry.
-    return Promise.resolve({
-        id: input.id,
-        title: input.title || "Placeholder Title",
-        website_url: input.website_url !== undefined ? input.website_url : null,
-        username: input.username !== undefined ? input.username : null,
-        password: input.password || "placeholder_password", // In real implementation, this should be encrypted
-        category: input.category || "Personal",
-        notes: input.notes !== undefined ? input.notes : null,
-        created_at: new Date(),
-        updated_at: new Date()
-    } as PasswordEntry);
+  try {
+    // First, check if the password entry exists
+    const existing = await db.select()
+      .from(passwordEntriesTable)
+      .where(eq(passwordEntriesTable.id, input.id))
+      .execute();
+
+    if (existing.length === 0) {
+      throw new Error(`Password entry with id ${input.id} not found`);
+    }
+
+    // Build update object with only provided fields
+    const updateData: Partial<typeof passwordEntriesTable.$inferInsert> = {
+      updated_at: new Date()
+    };
+
+    if (input.title !== undefined) {
+      updateData.title = input.title;
+    }
+    if (input.website_url !== undefined) {
+      updateData.website_url = input.website_url;
+    }
+    if (input.username !== undefined) {
+      updateData.username = input.username;
+    }
+    if (input.password !== undefined) {
+      updateData.password = input.password;
+    }
+    if (input.category !== undefined) {
+      updateData.category = input.category;
+    }
+    if (input.notes !== undefined) {
+      updateData.notes = input.notes;
+    }
+
+    // Update the password entry
+    const result = await db.update(passwordEntriesTable)
+      .set(updateData)
+      .where(eq(passwordEntriesTable.id, input.id))
+      .returning()
+      .execute();
+
+    return result[0];
+  } catch (error) {
+    console.error('Password entry update failed:', error);
+    throw error;
+  }
 };

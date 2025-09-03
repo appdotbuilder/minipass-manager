@@ -1,8 +1,20 @@
+import { db } from '../db';
+import { passwordEntriesTable } from '../db/schema';
 import { type DeletePasswordEntryInput } from '../schema';
+import { eq } from 'drizzle-orm';
 
 export const deletePasswordEntry = async (input: DeletePasswordEntryInput): Promise<{ success: boolean }> => {
-    // This is a placeholder declaration! Real code should be implemented here.
-    // The goal of this handler is deleting a password entry from the database by ID.
-    // It should return success status and handle cases where the entry doesn't exist.
-    return Promise.resolve({ success: true });
+  try {
+    // Delete the password entry by ID
+    const result = await db.delete(passwordEntriesTable)
+      .where(eq(passwordEntriesTable.id, input.id))
+      .returning()
+      .execute();
+
+    // Check if any row was actually deleted
+    return { success: result.length > 0 };
+  } catch (error) {
+    console.error('Password entry deletion failed:', error);
+    throw error;
+  }
 };
